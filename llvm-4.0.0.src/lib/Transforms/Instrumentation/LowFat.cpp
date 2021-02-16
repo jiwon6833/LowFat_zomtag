@@ -156,51 +156,67 @@ static bool isInterestingGlobal(GlobalVariable *GV);
  * Options
  */
 static cl::opt<bool> option_debug("lowfat-debug",
-    cl::desc("Dump before-and-after LowFat instrumented LLVM IR"));
+				  cl::desc("Dump before-and-after LowFat instrumented LLVM IR"),
+				  cl::init(true));
 static cl::opt<bool> option_no_check_reads("lowfat-no-check-reads",
-    cl::desc("Do not OOB-check reads"));
+					   cl::desc("Do not OOB-check reads"),
+					   cl::init(true));
 static cl::opt<bool> option_no_check_writes("lowfat-no-check-writes",
-    cl::desc("Do not OOB-check writes"));
+					    cl::desc("Do not OOB-check writes"),
+					    cl::init(true));
 static cl::opt<bool> option_no_check_escapes("lowfat-no-check-escapes",
-    cl::desc("Do not OOB-check pointer escapes"));
+					     cl::desc("Do not OOB-check pointer escapes"),
+					     cl::init(true));
 static cl::opt<bool> option_no_check_memset("lowfat-no-check-memset",
-    cl::desc("Do not OOB-check memset"));
+					    cl::desc("Do not OOB-check memset"),
+					    cl::init(true));
 static cl::opt<bool> option_no_check_memcpy("lowfat-no-check-memcpy",
-    cl::desc("Do not OOB-check memcpy or memmove"));
+					    cl::desc("Do not OOB-check memcpy or memmove"),
+					    cl::init(true));
 static cl::opt<bool> option_no_check_escape_call("lowfat-no-check-escape-call",
-    cl::desc("Do not OOB-check pointer call escapes"));
+						 cl::desc("Do not OOB-check pointer call escapes"),
+						 cl::init(true));
 static cl::opt<bool> option_no_check_escape_return(
     "lowfat-no-check-escape-return",
-    cl::desc("Do not OOB-check pointer return escapes"));
+    cl::desc("Do not OOB-check pointer return escapes"),
+    cl::init(true));
 static cl::opt<bool> option_no_check_escape_store(
     "lowfat-no-check-escape-store",
-    cl::desc("Do not OOB-check pointer store escapes"));
+    cl::desc("Do not OOB-check pointer store escapes"),
+    cl::init(true));
 static cl::opt<bool> option_no_check_escape_ptr2int(
     "lowfat-no-check-escape-ptr2int",
-    cl::desc("Do not OOB-check pointer pointer-to-int escapes"));
+    cl::desc("Do not OOB-check pointer pointer-to-int escapes"),
+    cl::init(true));
 static cl::opt<bool> option_no_check_escape_insert(
     "lowfat-no-check-escape-insert",
-    cl::desc("Do not OOB-check pointer vector insert escapes"));
+    cl::desc("Do not OOB-check pointer vector insert escapes"),
+    cl::init(true));
 static cl::opt<bool> option_no_check_fields(
     "lowfat-no-check-fields",
-    cl::desc("Do not OOB-check field access (reduces the number of checks)"));
+    cl::desc("Do not OOB-check field access (reduces the number of checks)"),
+    cl::init(true));
 static cl::opt<bool> option_check_whole_access(
     "lowfat-check-whole-access",
     cl::desc("OOB-check the whole pointer access ptr..ptr+sizeof(*ptr) as "
-        "opposed to just ptr (increases the number and cost of checks)"));
+	     "opposed to just ptr (increases the number and cost of checks)"),
+    cl::init(true));
 static cl::opt<bool> option_no_replace_malloc(
     "lowfat-no-replace-malloc",
     cl::desc("Do not replace malloc() with LowFat malloc() "
-        "(disables heap protection)"));
+	     "(disables heap protection)"),
+    cl::init(false));
 static cl::opt<bool> option_no_replace_alloca(
     "lowfat-no-replace-alloca",
     cl::desc("Do not replace stack allocation (alloca) with LowFat stack "
-        "allocation (disables stack protection)"));
+	     "allocation (disables stack protection)"),
+    cl::init(true));
 static cl::opt<bool> option_no_replace_globals(
     "lowfat-no-replace-globals",
     cl::desc("Do not replace globals with LowFat globals "
         "(disables global variable protection; should also be combined with "
-        "-mcmodel=small)"));
+	     "-mcmodel=small)"),
+    cl::init(true));
 static cl::opt<string> option_no_check_blacklist(
     "lowfat-no-check-blacklist",
     cl::desc("Do not OOB-check the functions/modules specified in the "
@@ -208,7 +224,8 @@ static cl::opt<string> option_no_check_blacklist(
     cl::init("-"));
 static cl::opt<bool> option_no_abort(
     "lowfat-no-abort",
-    cl::desc("Do not abort the program if an OOB memory error occurs"));
+    cl::desc("Do not abort the program if an OOB memory error occurs"),
+    cl::init(false));
 
 /*
  * Fool-proof "leading zero count" implementation.  Also works for "0".
