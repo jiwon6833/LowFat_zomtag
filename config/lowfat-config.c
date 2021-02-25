@@ -311,13 +311,16 @@ int main(int argc, char **argv)
         "_|_|_|_|    _|_|        _|      _|      _|        _|_|_|      _|_|\n"
         "\n");
 
-    size_t region_size = atoi(argv[optind+1]);
+    //size_t region_size = atoi(argv[optind+1]);
+    size_t region_size = 4;
+    /*
     if (region_size < MIN_REGION_SIZE || region_size > MAX_REGION_SIZE)
     {
         fprintf(stderr, "error: region size must be within range %u..%uGB\n",
             MIN_REGION_SIZE, MAX_REGION_SIZE);
         return EXIT_FAILURE;
     }
+    */
     if (!is_pow2(region_size))
     {
         fprintf(stderr, "error: region size must be a power-of-two\n");
@@ -359,6 +362,7 @@ int main(int argc, char **argv)
         }
         if (sizes[i] > MAX_SIZE)
             break;
+        /*
         if (sizes[i] < MIN_SIZE || sizes[i] % MIN_SIZE != 0)
         {
             fprintf(stderr, "error: size %zu from size configuration file "
@@ -372,6 +376,7 @@ int main(int argc, char **argv)
                 MIN_SIZE);
             return EXIT_FAILURE;
         }
+        */
         if (i > 0 && sizes[i] <= sizes[i-1])
         {
             fprintf(stderr, "error: size configuration file \"%s\" is not "
@@ -380,6 +385,7 @@ int main(int argc, char **argv)
         }
     }
     fclose(stream);
+    /*
     if (i <= MIN_SIZES || i >= MAX_SIZES)
     {
         fprintf(stderr, "error: size configuration file \"%s\" length "
@@ -387,6 +393,7 @@ int main(int argc, char **argv)
             MAX_SIZES-1);
         return EXIT_FAILURE;
     }
+    */
     size_t sizes_len = i;
 
     // Check for LZCNT/BMI support:

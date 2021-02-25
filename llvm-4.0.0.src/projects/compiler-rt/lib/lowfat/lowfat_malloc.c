@@ -81,12 +81,18 @@ extern bool lowfat_malloc_init(void)
         size_t idx = i+1;
         uint8_t *heapptr = (uint8_t *)lowfat_region(idx) +
             LOWFAT_HEAP_MEMORY_OFFSET;
+        /* 
         uint32_t roffset;           // Offset for ASLR
         lowfat_rand(&roffset, sizeof(roffset));
         roffset &= LOWFAT_HEAP_ASLR_MASK;
         uint8_t *startptr =
             (uint8_t *)lowfat_base(heapptr + roffset + lowfat_size(heapptr) +
                 LOWFAT_PAGE_SIZE);
+        lowfat_rand(&roffset, sizeof(roffset));
+        roffset &= LOWFAT_HEAP_ASLR_MASK;
+        */
+        uint8_t *startptr =
+            (uint8_t *)lowfat_base(heapptr + lowfat_size(heapptr) + LOWFAT_PAGE_SIZE);
         lowfat_regioninfo_t info = LOWFAT_REGION_INFO + idx;
         if (!lowfat_mutex_init(&info->mutex))
             return false;
