@@ -165,6 +165,21 @@ static bool zomtag_malloc_init_region(regionid_t idx){
 	return true;
 }
 
+void displayhex(unsigned long long ptr){
+	char buf[2*sizeof(unsigned long long)];
+	for(int k=2*sizeof(unsigned long long)-1;k>=0;--k){
+		unsigned num = ptr % 0x10;
+		char c;
+		if(num <= 10) c = '0' + num;
+		else c = 'a' + (num - 10);
+		buf[k] = c;
+		ptr /= 0x10;
+	}
+	for(int k=0;k<2*sizeof(unsigned long long);++k){
+		putchar(buf[k]);
+	}
+}
+
 /*
  * LOWFAT malloc()
  */
@@ -217,7 +232,19 @@ extern void *lowfat_malloc(size_t size)
     lowfat_mutex_unlock(&info->linkmutex);
     lowfat_mutex_unlock(&sizeinfo->mutex);
 
-    return lowfat_malloc_index(regionid, size);
+    void * ptr = lowfat_malloc_index(regionid, size);
+    /*
+    putchar('m');
+    displayhex((unsigned long long)ptr);
+    putchar(' ');
+    displayhex((unsigned long long)size);
+    putchar(' ');
+    displayhex((unsigned long long)LOWFAT_SIZES[sizeid]);
+    putchar('\n');
+    */
+
+    fprintf(stderr, "lowfat_malloc %p with request size %lx alloc size %lx\n", ptr, size, LOWFAT_SIZES[sizeid]);
+    return ptr;
     //LKR end
 }
 extern void *lowfat_malloc_index(size_t /* regionid_t */ idx, size_t size)
@@ -306,6 +333,12 @@ extern void *lowfat_malloc_index(size_t /* regionid_t */ idx, size_t size)
  */
 extern void lowfat_free(void *ptr)
 {
+    /*
+    putchar('f');
+    displayhex((unsigned long long)ptr);
+    putchar('\n');
+    */
+    fprintf(stderr, "lowfat_free receive free request ptr %p\n", ptr);
     if (ptr == NULL)    // free(NULL) is a NOP.
         return;
     if (!lowfat_is_ptr(ptr))
