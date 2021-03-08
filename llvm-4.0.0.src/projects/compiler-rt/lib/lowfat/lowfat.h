@@ -26,7 +26,7 @@ extern "C"
 {
 #endif
 
-#define _LOWFAT_CONST      __attribute__((__const__))
+#define _LOWFAT_CONST      //__attribute__((__const__))
 #define _LOWFAT_NORETURN   __attribute__((__noreturn__))
 #define _LOWFAT_MALLOC     __attribute__((__malloc__))
 #define _LOWFAT_INLINE     __attribute__((__always_inline__))
@@ -76,15 +76,14 @@ static inline _LOWFAT_INLINE size_t lowfat_index(const void *_ptr)
 /*
  * Return the sizeid of the object pointed to by `_ptr`
  */
-_LOWFAT_CONST /*_LOWFAT_INLINE*/ size_t lowfat_sizeid(const void * _ptr);
+/*_LOWFAT_CONST _LOWFAT_INLINE*/ size_t lowfat_sizeid(const void * _ptr);
 
 /*
  * Return the (allocation) size of the object pointed to by `_ptr', measured 
  * from the object's base address.  If the size is unknown then this function
  * returns SIZE_MAX.
  */
-// definition moved to lowfat_malloc.c
-static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_size(const void *_ptr)
+static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE size_t lowfat_size(const void *_ptr)
 {
     size_t sizeid = lowfat_sizeid(_ptr);
     return (sizeid < LOWFAT_NUM_REGIONS ? _LOWFAT_SIZES[sizeid] : SIZE_MAX);
@@ -95,7 +94,7 @@ static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_size(const void *_ptr)
  * Return the "object index" of the object pointed to by `_ptr', defined as
  * objidx = _ptr / lowfat_size(_ptr).  Not implemented in POW2-mode.
  */
-static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_objidx(
+static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE size_t lowfat_objidx(
         const void *_ptr)
 {
     size_t _idx = lowfat_sizeid(_ptr);
@@ -113,7 +112,7 @@ static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_objidx(
  * Return the base-pointer of the object pointed to by `_ptr'.  If the base
  * pointer is unknown then this functon returns NULL.
  */
-static inline _LOWFAT_CONST _LOWFAT_INLINE void *lowfat_base(const void *_ptr)
+static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE void *lowfat_base(const void *_ptr)
 {
     size_t _idx = lowfat_sizeid(_ptr);
 #ifndef LOWFAT_IS_POW2
@@ -127,7 +126,7 @@ static inline _LOWFAT_CONST _LOWFAT_INLINE void *lowfat_base(const void *_ptr)
 /*
  * Return the low-fat magic number for `_ptr'.
  */
-static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_magic(const void *_ptr)
+static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE size_t lowfat_magic(const void *_ptr)
 {
     size_t sizeid = lowfat_sizeid(_ptr);
     return (sizeid < LOWFAT_NUM_REGIONS ? _LOWFAT_MAGICS[sizeid] : 0);

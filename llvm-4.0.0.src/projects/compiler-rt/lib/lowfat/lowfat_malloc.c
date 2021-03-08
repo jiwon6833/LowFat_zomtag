@@ -97,6 +97,7 @@ static void *lowfat_fallback_malloc(size_t size)
     void *ptr = __libc_malloc(size);        // Std malloc().
     if (ptr == NULL)
         lowfat_error("memory allocation failed: %s", strerror(errno));
+    fprintf(stderr, "lowfat_fallback_malloc %p with request size %lx\n", ptr, size);
     return ptr;
 #endif      /* LOWFAT_NO_STD_MALLOC_FALLBACK */
 }
@@ -165,21 +166,6 @@ static bool zomtag_malloc_init_region(regionid_t idx){
 	return true;
 }
 
-void displayhex(unsigned long long ptr){
-	char buf[2*sizeof(unsigned long long)];
-	for(int k=2*sizeof(unsigned long long)-1;k>=0;--k){
-		unsigned num = ptr % 0x10;
-		char c;
-		if(num <= 10) c = '0' + num;
-		else c = 'a' + (num - 10);
-		buf[k] = c;
-		ptr /= 0x10;
-	}
-	for(int k=0;k<2*sizeof(unsigned long long);++k){
-		putchar(buf[k]);
-	}
-}
-
 /*
  * LOWFAT malloc()
  */
@@ -190,9 +176,7 @@ extern void *lowfat_malloc(size_t size)
     //lowfat_heap_select -> sizeid_select
     sizeid_t sizeid = lowfat_heap_select(size);
     if(sizeid == 0){
-        void * ptr = lowfat_fallback_malloc(size);
-	fprintf(stderr, "lowfat_malloc fallback allocate %p request size %lu\n", ptr, size);
-	return ptr;
+        return lowfat_fallback_malloc(size);
     }
     else sizeid--;
     sizeinfo_t sizeinfo = &SIZEMETA[sizeid];
@@ -249,7 +233,7 @@ extern void *lowfat_malloc(size_t size)
     putchar('\n');
     */
 
-    fprintf(stderr, "lowfat_malloc %p with request size %lx alloc size %lx\n", ptr, size, LOWFAT_SIZES[sizeid]);
+    if(lowfat_is_ptr(ptr)) fprintf(stderr, "lowfat_malloc %p with request size %lx alloc size %lx\n", ptr, size, LOWFAT_SIZES[sizeid]);
     return ptr;
     //LKR end
 }
@@ -475,8 +459,11 @@ extern void *lowfat_realloc(void *ptr, size_t size)
 #endif      /* LOWFAT_NO_PROTECT */
         return ptr;
     }
-    if (!lowfat_is_ptr(ptr))
-        return lowfat_fallback_realloc(ptr, size);
+    if (!lowfat_is_ptr(ptr)){
+        void * ptr = lowfat_fallback_realloc(ptr, size);
+	fprintf(stderr, "lowfat_fallback_realloc %p request size %lu\n", ptr, size);
+	return ptr;
+    }
 
     // (2) Do the reallocation + copy:
     void *newptr = lowfat_malloc(size);
