@@ -74,14 +74,20 @@ static inline _LOWFAT_INLINE size_t lowfat_index(const void *_ptr)
 }
 
 /*
+ * Return the sizeid of the object pointed to by `_ptr`
+ */
+_LOWFAT_CONST /*_LOWFAT_INLINE*/ size_t lowfat_sizeid(const void * _ptr);
+
+/*
  * Return the (allocation) size of the object pointed to by `_ptr', measured 
  * from the object's base address.  If the size is unknown then this function
  * returns SIZE_MAX.
  */
+// definition moved to lowfat_malloc.c
 static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_size(const void *_ptr)
 {
-    size_t _idx = lowfat_index(_ptr);
-    return _LOWFAT_SIZES[_idx];
+    size_t sizeid = lowfat_sizeid(_ptr);
+    return (sizeid < LOWFAT_NUM_REGIONS ? _LOWFAT_SIZES[sizeid] : SIZE_MAX);
 }
 
 #ifndef LOWFAT_IS_POW2
@@ -92,7 +98,10 @@ static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_size(const void *_ptr)
 static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_objidx(
         const void *_ptr)
 {
-    size_t _idx = lowfat_index(_ptr);
+    size_t _idx = lowfat_sizeid(_ptr);
+    if(_idx >= LOWFAT_NUM_REGIONS)
+        return 0;
+
     unsigned __int128 _tmp = (unsigned __int128)_LOWFAT_MAGICS[_idx] *
         (unsigned __int128)(uintptr_t)_ptr;
     size_t _objidx = (size_t)(_tmp >> 64);
@@ -106,7 +115,7 @@ static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_objidx(
  */
 static inline _LOWFAT_CONST _LOWFAT_INLINE void *lowfat_base(const void *_ptr)
 {
-    size_t _idx = lowfat_index(_ptr);
+    size_t _idx = lowfat_sizeid(_ptr);
 #ifndef LOWFAT_IS_POW2
     size_t _objidx = lowfat_objidx(_ptr);
     return (void *)(_objidx * _LOWFAT_SIZES[_idx]);
@@ -120,8 +129,8 @@ static inline _LOWFAT_CONST _LOWFAT_INLINE void *lowfat_base(const void *_ptr)
  */
 static inline _LOWFAT_CONST _LOWFAT_INLINE size_t lowfat_magic(const void *_ptr)
 {
-    size_t _idx = lowfat_index(_ptr);
-    return _LOWFAT_MAGICS[_idx];
+    size_t sizeid = lowfat_sizeid(_ptr);
+    return (sizeid < LOWFAT_NUM_REGIONS ? _LOWFAT_MAGICS[sizeid] : 0);
 }
 
 /*

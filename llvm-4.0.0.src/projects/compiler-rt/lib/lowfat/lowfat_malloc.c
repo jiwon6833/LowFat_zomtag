@@ -29,6 +29,25 @@ extern void *__libc_malloc(size_t size);
 extern void *__libc_realloc(void *ptr, size_t size);
 extern void __libc_free(void *ptr);
 
+// size entry LKR
+
+typedef size_t regionid_t;
+typedef size_t sizeid_t;
+
+struct sizeinfo_s{
+    lowfat_mutex_t mutex;
+    regionid_t freelist;
+};
+typedef struct sizeinfo_s * sizeinfo_t;
+
+LOWFAT_DATA struct sizeinfo_s SIZEMETA[LOWFAT_NUM_REGIONS];
+
+#define ALLOC_PER_REGION 16
+lowfat_mutex_t regionmutex;
+regionid_t freeregion;
+
+// size entry LKR end
+
 /*
  * Allocator data-structures.
  */
@@ -46,10 +65,29 @@ struct lowfat_regioninfo_s
     void *freeptr;
     void *endptr;
     void *accessptr;
+
+    //assigned size
+    lowfat_mutex_t linkmutex;
+    sizeid_t allocsizeid;
+    unsigned alloccount;
+    regionid_t samesizenext;
 };
 typedef struct lowfat_regioninfo_s *lowfat_regioninfo_t;
 
 LOWFAT_DATA struct lowfat_regioninfo_s LOWFAT_REGION_INFO[LOWFAT_NUM_REGIONS+1];
+
+// added helpers
+
+/*
+ * Return the sizeid of the object pointed to by `_ptr`
+ */
+_LOWFAT_CONST /*_LOWFAT_INLINE*/ size_t lowfat_sizeid(const void * _ptr){
+    regionid_t regionid = lowfat_index(_ptr);
+    lowfat_regioninfo_t info = &LOWFAT_REGION_INFO[regionid];
+    return info->allocsizeid;
+}
+
+// added helpers end
 
 static void *lowfat_fallback_malloc(size_t size)
 {
@@ -76,9 +114,21 @@ static void *lowfat_fallback_malloc(size_t size)
  */
 extern bool lowfat_malloc_init(void)
 {
-    for (size_t i = 0; i < LOWFAT_NUM_REGIONS; i++)
-    {
-        size_t idx = i+1;
+    // init sizemeta
+    for(sizeid_t idx=0;idx<LOWFAT_NUM_REGIONS;idx++){
+        sizeinfo_t sizeinfo = &SIZEMETA[idx];
+        if(!lowfat_mutex_init(&sizeinfo->mutex))
+            return false;
+    	sizeinfo->freelist = 0; // NULL_REGION
+    }
+    if(!lowfat_mutex_init(&regionmutex))
+        return false;
+    freeregion = 1;
+    // init sizemeta end
+    return true;
+}
+
+static bool zomtag_malloc_init_region(regionid_t idx){
         uint8_t *heapptr = (uint8_t *)lowfat_region(idx) +
             LOWFAT_HEAP_MEMORY_OFFSET;
         /* 
@@ -101,12 +151,18 @@ extern bool lowfat_malloc_init(void)
         info->endptr    = heapptr + LOWFAT_HEAP_MEMORY_SIZE;
         info->accessptr = LOWFAT_PAGES_BASE(startptr);
 
+        if(!lowfat_mutex_init(&info->linkmutex))
+            return false;
+        //info->allocsizeid = NUM_SIZES; // assume to be already assigned
+	info->alloccount = ALLOC_PER_REGION; // can be smaller
+	info->samesizenext = 0; // NULL_REGION
+
 #ifdef LOWFAT_NO_PROTECT
         // In "no protect" mode, make entire heap region accessible
         lowfat_protect(heapptr, LOWFAT_HEAP_MEMORY_SIZE, true, true);
 #endif      /* LOWFAT_NO_PROTECT */
-    }
-    return true;
+
+	return true;
 }
 
 /*
@@ -115,10 +171,56 @@ extern bool lowfat_malloc_init(void)
 extern void *lowfat_malloc_index(size_t idx, size_t size);
 extern void *lowfat_malloc(size_t size)
 {
-    size_t idx = lowfat_heap_select(size);
-    return lowfat_malloc_index(idx, size);
+    //LKR future: lowfat_heap_select -> lowfat_size_select
+    //lowfat_heap_select -> sizeid_select
+    sizeid_t sizeid = lowfat_heap_select(size)-1;
+    sizeinfo_t sizeinfo = &SIZEMETA[sizeid];
+
+    regionid_t regionid;
+    lowfat_regioninfo_t info;
+
+    lowfat_mutex_lock(&sizeinfo->mutex);
+
+    //select a heap
+    if(sizeinfo->freelist == 0)// NULL_REGION
+    {
+        if(freeregion > LOWFAT_NUM_REGIONS){
+            // all regions are allocated
+            // fallback
+            return lowfat_fallback_malloc(size);
+        }
+
+        //allocate a region to sizeid
+        sizeinfo_t sizeinfo = &SIZEMETA[sizeid]; //redundant
+
+        lowfat_mutex_lock(&regionmutex);
+        regionid = sizeinfo->freelist = freeregion++;
+        lowfat_mutex_unlock(&regionmutex);
+
+        info = &LOWFAT_REGION_INFO[regionid];
+
+        lowfat_mutex_lock(&info->linkmutex);
+        info->samesizenext = 0; // NULL_REGION
+        info->allocsizeid = sizeid;
+        zomtag_malloc_init_region(regionid);
+    }
+    else{
+        regionid = sizeinfo->freelist;
+        info = &LOWFAT_REGION_INFO[regionid];
+        lowfat_mutex_lock(&info->linkmutex);
+    }
+
+    info->alloccount--;
+    if(info->alloccount == 0){
+        sizeinfo->freelist = info->samesizenext;
+    }
+    lowfat_mutex_unlock(&info->linkmutex);
+    lowfat_mutex_unlock(&sizeinfo->mutex);
+
+    return lowfat_malloc_index(regionid, size);
+    //LKR end
 }
-extern void *lowfat_malloc_index(size_t idx, size_t size)
+extern void *lowfat_malloc_index(size_t /* regionid_t */ idx, size_t size)
 {
 #ifdef LOWFAT_STANDALONE
     // In "standalone" mode, malloc() may be called before the constructors,
@@ -134,9 +236,9 @@ extern void *lowfat_malloc_index(size_t idx, size_t size)
         return lowfat_fallback_malloc(size);
     }
     
-    size_t alloc_size = LOWFAT_SIZES[idx];     // Real allocation size.
-
     lowfat_regioninfo_t info = LOWFAT_REGION_INFO + idx;
+    size_t alloc_size = LOWFAT_SIZES[info->allocsizeid];     // Real allocation size.
+
     void *ptr;
 
     lowfat_mutex_lock(&info->mutex);
@@ -229,8 +331,13 @@ extern void lowfat_free(void *ptr)
     // memalign() type allocations).
     ptr = lowfat_base(ptr);
 
-    size_t idx = lowfat_index(ptr);
-    size_t alloc_size = LOWFAT_SIZES[idx];
+    regionid_t idx = lowfat_index(ptr);
+    lowfat_regioninfo_t info = &LOWFAT_REGION_INFO[idx];
+
+    sizeid_t sizeid = info->allocsizeid;
+    sizeinfo_t sizeinfo = &SIZEMETA[sizeid];
+
+    size_t alloc_size = LOWFAT_SIZES[sizeid];
     if (alloc_size >= LOWFAT_BIG_OBJECT)
     {
         // This is a big object, so return memory to the OS.
@@ -249,13 +356,23 @@ extern void lowfat_free(void *ptr)
 #endif      /* LOWFAT_NO_PROTECT */
     }
 
-    lowfat_regioninfo_t info = LOWFAT_REGION_INFO + idx;
     lowfat_mutex_lock(&info->mutex);
     lowfat_freelist_t newfreelist = (lowfat_freelist_t)ptr;
     lowfat_freelist_t oldfreelist = info->freelist;
     newfreelist->next = oldfreelist;
     info->freelist = newfreelist;
     lowfat_mutex_unlock(&info->mutex);
+
+    lowfat_mutex_lock(&sizeinfo->mutex);
+    lowfat_mutex_lock(&info->linkmutex);
+
+    if(info->alloccount == 0){
+        info->samesizenext = sizeinfo->freelist;
+        sizeinfo->freelist = idx;
+    }
+    info->alloccount++;
+    lowfat_mutex_unlock(&info->linkmutex);
+    lowfat_mutex_unlock(&sizeinfo->mutex);
 }
 
 /*
@@ -305,11 +422,11 @@ extern void *lowfat_realloc(void *ptr, size_t size)
     if (ptr == NULL || size == 0)
         return lowfat_malloc(size);
     if (lowfat_is_ptr(ptr) &&
-        lowfat_index(ptr) == lowfat_heap_select(size))
+        LOWFAT_REGION_INFO[lowfat_index(ptr)].allocsizeid == lowfat_heap_select(size)-1)
     {
 #ifndef LOWFAT_NO_PROTECT
         // `ptr' and `size' map to the same region; allocation can be avoided.
-        size_t alloc_size = LOWFAT_SIZES[lowfat_index(ptr)];
+        size_t alloc_size = LOWFAT_SIZES[LOWFAT_REGION_INFO[lowfat_index(ptr)].allocsizeid];
         if (alloc_size >= LOWFAT_BIG_OBJECT)
         {
             void *prot_ptr = LOWFAT_PAGES_BASE(ptr);
@@ -328,7 +445,8 @@ extern void *lowfat_realloc(void *ptr, size_t size)
         return NULL;
     size_t cpy_size;
     size_t idx = lowfat_index(ptr);
-    size_t ptr_size = LOWFAT_SIZES[idx];
+    sizeid_t sizeid = LOWFAT_REGION_INFO[idx].allocsizeid;
+    size_t ptr_size = LOWFAT_SIZES[sizeid];
     cpy_size = (size < ptr_size? size: ptr_size);
 #ifndef LOWFAT_NO_PROTECT
     if (ptr_size >= LOWFAT_BIG_OBJECT)
