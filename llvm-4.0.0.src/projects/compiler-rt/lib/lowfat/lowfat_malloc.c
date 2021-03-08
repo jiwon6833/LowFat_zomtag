@@ -188,7 +188,13 @@ extern void *lowfat_malloc(size_t size)
 {
     //LKR future: lowfat_heap_select -> lowfat_size_select
     //lowfat_heap_select -> sizeid_select
-    sizeid_t sizeid = lowfat_heap_select(size)-1;
+    sizeid_t sizeid = lowfat_heap_select(size);
+    if(sizeid == 0){
+        void * ptr = lowfat_fallback_malloc(size);
+	fprintf(stderr, "lowfat_malloc fallback allocate %p request size %lu\n", ptr, size);
+	return ptr;
+    }
+    else sizeid--;
     sizeinfo_t sizeinfo = &SIZEMETA[sizeid];
 
     regionid_t regionid;
