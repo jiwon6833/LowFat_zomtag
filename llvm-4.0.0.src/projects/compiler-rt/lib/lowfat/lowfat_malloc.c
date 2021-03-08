@@ -192,9 +192,7 @@ extern void *lowfat_malloc(size_t size)
         if(freeregion > LOWFAT_NUM_REGIONS){
             // all regions are allocated
             // fallback
-          void * ptr = lowfat_fallback_malloc(size);
-	fprintf(stderr, "lowfat_malloc fallback allocate %p request size %lu\n", ptr, size);
-	return ptr;
+          return lowfat_fallback_malloc(size);
         //return lowfat_fallback_malloc(size);
         }
 
@@ -334,6 +332,7 @@ extern void lowfat_free(void *ptr)
     
     if (ptr == NULL)    // free(NULL) is a NOP.
         return;
+    fprintf(stderr, "lowfat_free receive free request ptr %p\n", ptr);
     if (!lowfat_is_ptr(ptr))
     {
         // If `ptr' is not low-fat, then it is assumed to from a legacy
@@ -342,7 +341,6 @@ extern void lowfat_free(void *ptr)
         lowfat_fallback_free(ptr);
         return;
     }
-    fprintf(stderr, "lowfat_free receive free request ptr %p\n", ptr);
     if (!lowfat_is_heap_ptr(ptr))
     {
         // Attempt to free a stack or global pointer.
