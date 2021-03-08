@@ -192,7 +192,10 @@ extern void *lowfat_malloc(size_t size)
         if(freeregion > LOWFAT_NUM_REGIONS){
             // all regions are allocated
             // fallback
-            return lowfat_fallback_malloc(size);
+          void * ptr = lowfat_fallback_malloc(size);
+	fprintf(stderr, "lowfat_malloc fallback allocate %p request size %lu\n", ptr, size);
+	return ptr;
+        //return lowfat_fallback_malloc(size);
         }
 
         //allocate a region to sizeid
@@ -233,7 +236,7 @@ extern void *lowfat_malloc(size_t size)
     putchar('\n');
     */
 
-    if(lowfat_is_ptr(ptr)) fprintf(stderr, "lowfat_malloc %p with request size %lx alloc size %lx\n", ptr, size, LOWFAT_SIZES[sizeid]);
+    if(lowfat_is_ptr(ptr)) fprintf(stderr, "lowfat_malloc %p with request size %lx alloc size %lx\n", ptr, size, lowfat_sizes[sizeid]);
     return ptr;
     //LKR end
 }
@@ -254,7 +257,7 @@ extern void *lowfat_malloc_index(size_t /* regionid_t */ idx, size_t size)
     }
     
     lowfat_regioninfo_t info = LOWFAT_REGION_INFO + idx;
-    size_t alloc_size = LOWFAT_SIZES[info->allocsizeid];     // Real allocation size.
+    size_t alloc_size = lowfat_sizes[info->allocsizeid];     // Real allocation size.
 
     void *ptr;
 
@@ -328,16 +331,18 @@ extern void lowfat_free(void *ptr)
     displayhex((unsigned long long)ptr);
     putchar('\n');
     */
-    fprintf(stderr, "lowfat_free receive free request ptr %p\n", ptr);
+    
     if (ptr == NULL)    // free(NULL) is a NOP.
         return;
     if (!lowfat_is_ptr(ptr))
     {
         // If `ptr' is not low-fat, then it is assumed to from a legacy
         // malloc() allocation.
+      
         lowfat_fallback_free(ptr);
         return;
     }
+    fprintf(stderr, "lowfat_free receive free request ptr %p\n", ptr);
     if (!lowfat_is_heap_ptr(ptr))
     {
         // Attempt to free a stack or global pointer.
@@ -360,7 +365,7 @@ extern void lowfat_free(void *ptr)
     sizeid_t sizeid = info->allocsizeid;
     sizeinfo_t sizeinfo = &SIZEMETA[sizeid];
 
-    size_t alloc_size = LOWFAT_SIZES[sizeid];
+    size_t alloc_size = lowfat_sizes[sizeid];
     if (alloc_size >= LOWFAT_BIG_OBJECT)
     {
         // This is a big object, so return memory to the OS.
@@ -449,7 +454,7 @@ extern void *lowfat_realloc(void *ptr, size_t size)
     {
 #ifndef LOWFAT_NO_PROTECT
         // `ptr' and `size' map to the same region; allocation can be avoided.
-        size_t alloc_size = LOWFAT_SIZES[LOWFAT_REGION_INFO[lowfat_index(ptr)].allocsizeid];
+        size_t alloc_size = lowfat_sizes[LOWFAT_REGION_INFO[lowfat_index(ptr)].allocsizeid];
         if (alloc_size >= LOWFAT_BIG_OBJECT)
         {
             void *prot_ptr = LOWFAT_PAGES_BASE(ptr);
@@ -472,7 +477,7 @@ extern void *lowfat_realloc(void *ptr, size_t size)
     size_t cpy_size;
     size_t idx = lowfat_index(ptr);
     sizeid_t sizeid = LOWFAT_REGION_INFO[idx].allocsizeid;
-    size_t ptr_size = LOWFAT_SIZES[sizeid];
+    size_t ptr_size = lowfat_sizes[sizeid];
     cpy_size = (size < ptr_size? size: ptr_size);
 #ifndef LOWFAT_NO_PROTECT
     if (ptr_size >= LOWFAT_BIG_OBJECT)

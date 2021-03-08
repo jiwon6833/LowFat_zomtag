@@ -86,7 +86,7 @@ static inline _LOWFAT_INLINE size_t lowfat_index(const void *_ptr)
 static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE size_t lowfat_size(const void *_ptr)
 {
     size_t sizeid = lowfat_sizeid(_ptr);
-    return (sizeid < LOWFAT_NUM_REGIONS ? _LOWFAT_SIZES[sizeid] : SIZE_MAX);
+    return (sizeid < LOWFAT_NUM_REGIONS ? lowfat_sizes[sizeid] : SIZE_MAX);
 }
 
 #ifndef LOWFAT_IS_POW2
@@ -101,7 +101,7 @@ static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE size_t lowfat_objidx(
     if(_idx >= LOWFAT_NUM_REGIONS)
         return 0;
 
-    unsigned __int128 _tmp = (unsigned __int128)_LOWFAT_MAGICS[_idx] *
+    unsigned __int128 _tmp = (unsigned __int128)lowfat_magics[_idx] *
         (unsigned __int128)(uintptr_t)_ptr;
     size_t _objidx = (size_t)(_tmp >> 64);
     return _objidx;
@@ -117,7 +117,7 @@ static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE void *lowfat_base(const void *_pt
     size_t _idx = lowfat_sizeid(_ptr);
 #ifndef LOWFAT_IS_POW2
     size_t _objidx = lowfat_objidx(_ptr);
-    return (void *)(_objidx * _LOWFAT_SIZES[_idx]);
+    return (void *)(_objidx * lowfat_sizes[_idx]);
 #else   /* LOWFAT_IS_POW2 */
     return (void *)((uintptr_t)_ptr & _LOWFAT_MAGICS[_idx]);
 #endif  /* LOWFAT_IS_POW2 */
@@ -129,7 +129,7 @@ static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE void *lowfat_base(const void *_pt
 static inline /*_LOWFAT_CONST*/ _LOWFAT_INLINE size_t lowfat_magic(const void *_ptr)
 {
     size_t sizeid = lowfat_sizeid(_ptr);
-    return (sizeid < LOWFAT_NUM_REGIONS ? _LOWFAT_MAGICS[sizeid] : 0);
+    return (sizeid < LOWFAT_NUM_REGIONS ? lowfat_magics[sizeid] : 0);
 }
 
 /*
