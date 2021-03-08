@@ -27,9 +27,9 @@ extern "C"
 #endif
 
 #define _LOWFAT_CONST      //__attribute__((__const__))
-#define _LOWFAT_NORETURN   __attribute__((__noreturn__))
-#define _LOWFAT_MALLOC     __attribute__((__malloc__))
-#define _LOWFAT_INLINE     __attribute__((__always_inline__))
+#define _LOWFAT_NORETURN   //__attribute__((__noreturn__))
+#define _LOWFAT_MALLOC     //__attribute__((__malloc__))
+#define _LOWFAT_INLINE     //__attribute__((__always_inline__))
 
 #define LOWFAT_OOB_ERROR_READ               0
 #define LOWFAT_OOB_ERROR_WRITE              1

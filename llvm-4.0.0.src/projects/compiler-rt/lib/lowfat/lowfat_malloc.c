@@ -76,6 +76,8 @@ typedef struct lowfat_regioninfo_s *lowfat_regioninfo_t;
 
 LOWFAT_DATA struct lowfat_regioninfo_s LOWFAT_REGION_INFO[LOWFAT_NUM_REGIONS+1];
 
+#define DEBUG(...) 
+
 // added helpers
 
 /*
@@ -97,7 +99,7 @@ static void *lowfat_fallback_malloc(size_t size)
     void *ptr = __libc_malloc(size);        // Std malloc().
     if (ptr == NULL)
         lowfat_error("memory allocation failed: %s", strerror(errno));
-    fprintf(stderr, "lowfat_fallback_malloc %p with request size %lx\n", ptr, size);
+    DEBUG(stderr, "lowfat_fallback_malloc %p with request size %lx\n", ptr, size);
     return ptr;
 #endif      /* LOWFAT_NO_STD_MALLOC_FALLBACK */
 }
@@ -200,15 +202,16 @@ extern void *lowfat_malloc(size_t size)
         sizeinfo_t sizeinfo = &SIZEMETA[sizeid]; //redundant
 
         lowfat_mutex_lock(&regionmutex);
-        regionid = sizeinfo->freelist = freeregion++;
+        regionid = freeregion++;
         lowfat_mutex_unlock(&regionmutex);
 
         info = &LOWFAT_REGION_INFO[regionid];
 
-        lowfat_mutex_lock(&info->linkmutex);
         info->samesizenext = 0; // NULL_REGION
         info->allocsizeid = sizeid;
         zomtag_malloc_init_region(regionid);
+        lowfat_mutex_lock(&info->linkmutex);
+        sizeinfo->freelist = regionid;
     }
     else{
         regionid = sizeinfo->freelist;
@@ -234,7 +237,7 @@ extern void *lowfat_malloc(size_t size)
     putchar('\n');
     */
 
-    if(lowfat_is_ptr(ptr)) fprintf(stderr, "lowfat_malloc %p with request size %lx alloc size %lx\n", ptr, size, lowfat_sizes[sizeid]);
+    if(lowfat_is_ptr(ptr)) DEBUG(stderr, "lowfat_malloc %p with request size %lx alloc size %lx\n", ptr, size, lowfat_sizes[sizeid]);
     return ptr;
     //LKR end
 }
@@ -332,7 +335,7 @@ extern void lowfat_free(void *ptr)
     
     if (ptr == NULL)    // free(NULL) is a NOP.
         return;
-    fprintf(stderr, "lowfat_free receive free request ptr %p\n", ptr);
+    DEBUG(stderr, "lowfat_free receive free request ptr %p\n", ptr);
     if (!lowfat_is_ptr(ptr))
     {
         // If `ptr' is not low-fat, then it is assumed to from a legacy
@@ -385,6 +388,7 @@ extern void lowfat_free(void *ptr)
     lowfat_mutex_lock(&info->mutex);
     lowfat_freelist_t newfreelist = (lowfat_freelist_t)ptr;
     lowfat_freelist_t oldfreelist = info->freelist;
+    DEBUG(stderr, "insert %p to freelist in region %lu\n", ptr, idx);
     newfreelist->next = oldfreelist;
     info->freelist = newfreelist;
     lowfat_mutex_unlock(&info->mutex);
@@ -463,9 +467,9 @@ extern void *lowfat_realloc(void *ptr, size_t size)
         return ptr;
     }
     if (!lowfat_is_ptr(ptr)){
-        void * ptr = lowfat_fallback_realloc(ptr, size);
-	fprintf(stderr, "lowfat_fallback_realloc %p request size %lu\n", ptr, size);
-	return ptr;
+        void * ptr2 = lowfat_fallback_realloc(ptr, size);
+	DEBUG(stderr, "lowfat_fallback_realloc %p request size %lu\n", ptr2, size);
+	return ptr2;
     }
 
     // (2) Do the reallocation + copy:

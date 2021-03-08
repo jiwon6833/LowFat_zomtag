@@ -27,12 +27,12 @@
 #define LOWFAT_PAGE_SIZE        4096
 #define LOWFAT_MAX_ADDRESS      0x1000000000000ull
 
-#define LOWFAT_CONSTRUCTOR      __attribute__((__constructor__(10102)))
-#define LOWFAT_DESTRUCTOR       __attribute__((__destructor__(10102)))
-#define LOWFAT_NOINLINE         __attribute__((__noinline__))
-#define LOWFAT_NORETURN         __attribute__((__noreturn__))
-#define LOWFAT_CONST            __attribute__((__const__))
-#define LOWFAT_ALIAS(name)      __attribute__((__alias__(name)))
+#define LOWFAT_CONSTRUCTOR      //__attribute__((__constructor__(10102)))
+#define LOWFAT_DESTRUCTOR       //__attribute__((__destructor__(10102)))
+#define LOWFAT_NOINLINE         //__attribute__((__noinline__))
+#define LOWFAT_NORETURN         //__attribute__((__noreturn__))
+#define LOWFAT_CONST            //__attribute__((__const__))
+#define LOWFAT_ALIAS(name)      //__attribute__((__alias__(name)))
 #define LOWFAT_DATA             /* EMPTY */
 #define LOWFAT_CPUID(a, c, ax, bx, cx, dx)                                  \
     __asm__ __volatile__ ("cpuid" : "=a" (ax), "=b" (bx), "=c" (cx),        \

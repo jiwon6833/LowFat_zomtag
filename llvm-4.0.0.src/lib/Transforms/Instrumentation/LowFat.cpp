@@ -343,6 +343,7 @@ static pair<BasicBlock *, BasicBlock::iterator> nextInsertPoint(Function *F,
 static void optimizeMalloc(Module *M, Instruction *I,
     vector<Instruction *> &dels)
 {
+  return;
     CallSite Call(I);
     if (!Call.isCall() && !Call.isInvoke())
         return;
