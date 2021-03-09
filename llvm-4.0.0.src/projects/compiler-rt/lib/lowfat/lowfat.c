@@ -24,8 +24,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef ZOMTAG
+
+#define TEST_NUM_REGIONS        25
+#define TEST_MAX_REGIONS        32768                     // 2^15
+#define TEST_PAGE_SIZE          4096
+#define TEST_MAX_ADDRESS        0x1000000000000ull        // 48bit
+#define TEST_REGION_SIZE        0x100000000ull            // 4G
+#define TEST_HEAP_MEMORY_OFFSET 0
+#define TEST_HEAP_MEMORY_SIZE   2147483648                // 2G
+
+#define DEBUG                   1
+#define TEST(s)                 printf("[TEST]\t%s\n", s);
+
+static bool test_malloc_inited = false;
+int test_region_cnt = 0;
+int min_unused_idx = 0;
+unsigned long TEST_SIZES[TEST_MAX_REGIONS + 1];
+
+bool test_malloc_init(void);
+#else
+
 #define LOWFAT_PAGE_SIZE        4096
 #define LOWFAT_MAX_ADDRESS      0x1000000000000ull
+
+#endif
+
 
 #define LOWFAT_CONSTRUCTOR      //__attribute__((__constructor__(10102)))
 #define LOWFAT_DESTRUCTOR       //__attribute__((__destructor__(10102)))
@@ -206,6 +230,46 @@ static LOWFAT_NORETURN void lowfat_segv_handler(int sig, siginfo_t *info,
  */
 void LOWFAT_CONSTRUCTOR lowfat_init(void)
 {
+#ifdef ZOMTAG
+
+  static bool test_inited = false;
+  if (test_inited)
+    return;
+  test_inited = true;
+
+  // Init regions for test_malloc()
+  for (size_t i = 1; i <= TEST_NUM_REGIONS; i++)
+  {
+    int prot = PROT_NONE;
+    int flags = MAP_NORESERVE | MAP_ANONYMOUS | MAP_PRIVATE;
+    
+    void *heap_start = (uint8_t *)test_region(i) + TEST_HEAP_MEMORY_OFFSET;
+    
+    if (heap_start != NULL)
+        flags |= MAP_FIXED;
+    
+    void *ptr = mmap(heap_start, TEST_HEAP_MEMORY_SIZE, prot, flags, -1, 0);
+
+    if (ptr != heap_start)
+      printf("[TEST]\tfailed to mmap memory: %s\n", strerror(errno));
+  }
+
+  // Create TEST_SIZES
+  // Hard code the sizes for now...
+  for (int i = 0; i < TEST_MAX_REGIONS; i++)
+    TEST_SIZES[i] = 0;
+  test_init_sizes();
+
+  // Initialize malloc.
+  if (!test_malloc_init())
+      printf("[TEST]\tfailed to initialize test malloc(): %s",
+        strerror(errno));
+  test_malloc_inited = true;
+
+  return;
+
+#else
+ 
     static bool lowfat_inited = false;
     if (lowfat_inited)
         return;
@@ -373,6 +437,7 @@ void LOWFAT_CONSTRUCTOR lowfat_init(void)
     // Replace stack with LOWFAT stack.
     lowfat_stack_pivot();
 
+#endif
 #endif
 #endif /* LOWFAT_DATA_ONLY */
 }

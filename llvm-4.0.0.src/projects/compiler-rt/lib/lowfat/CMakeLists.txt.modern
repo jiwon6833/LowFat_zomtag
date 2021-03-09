@@ -6,7 +6,7 @@ set(LOWFAT_SOURCES
 include_directories(..)
 
 #set(LOWFAT_CFLAGS -std=gnu99 -m64 -I. -O2 -mbmi -mbmi2 -mlzcnt -mcmodel=large -DLOWFAT_LINUX)
-set(LOWFAT_CFLAGS -std=gnu99 -m64 -I. -O0 -g -mbmi -mbmi2 -mlzcnt -mcmodel=large -DLOWFAT_LINUX -DLOWFAT_NO_THREADS) 
+set(LOWFAT_CFLAGS -std=gnu99 -m64 -I. -O0 -g -mbmi -mbmi2 -mlzcnt -mcmodel=large -DLOWFAT_LINUX -DLOWFAT_NO_THREADS -DZOMTAG) 
 add_compiler_rt_runtime(clang_rt.lowfat
         STATIC
         ARCHS x86_64 
