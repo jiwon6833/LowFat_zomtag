@@ -200,7 +200,7 @@ static cl::opt<bool> option_check_whole_access(
     "lowfat-check-whole-access",
     cl::desc("OOB-check the whole pointer access ptr..ptr+sizeof(*ptr) as "
 	     "opposed to just ptr (increases the number and cost of checks)"),
-    cl::init(true));
+    cl::init(false));
 static cl::opt<bool> option_no_replace_malloc(
     "lowfat-no-replace-malloc",
     cl::desc("Do not replace malloc() with LowFat malloc() "

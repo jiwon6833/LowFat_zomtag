@@ -421,7 +421,6 @@ extern void *lowfat_malloc(size_t size)
             // all regions are allocated
             // fallback
           return lowfat_fallback_malloc(size);
-        //return lowfat_fallback_malloc(size);
         }
 
         //allocate a region to sizeid
